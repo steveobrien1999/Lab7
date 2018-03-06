@@ -48,6 +48,9 @@ public class MorseDecoder {
         /*
          * We should check the results of getNumFrames to ensure that they are safe to cast to int.
          */
+        if ((int) inputFile.getNumFrames() == 0) {
+            return null;
+        }
         int totalBinCount = (int) Math.ceil(inputFile.getNumFrames() / BIN_SIZE);
         double[] returnBuffer = new double[totalBinCount];
 
@@ -55,6 +58,8 @@ public class MorseDecoder {
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
             // Get the right number of samples from the inputFile
             // Sum all the samples together and store them in the returnBuffer
+            sampleBuffer[binIndex] = inputFile.getValidBits();
+            returnBuffer[binIndex] = sampleBuffer[binIndex];
         }
         return returnBuffer;
     }
@@ -82,12 +87,42 @@ public class MorseDecoder {
          * transitions. You will also have to store how much power or silence you have seen.
          */
 
+        int count = 0;
+        int silenceCount = 0;
+        String returnBuffer = "";
+        for (int i = 0; i < powerMeasurements.length; i++) {
+            if (i >= POWER_THRESHOLD && i - 1 >= POWER_THRESHOLD) {
+                count++;
+            }
+            else if (i >= POWER_THRESHOLD && i - 1 < POWER_THRESHOLD) {
+                if (silenceCount >= DASH_BIN_COUNT) {
+                   count++;
+                   silenceCount = 0;
+                   returnBuffer += " ";
+                }
+            }
+            else if (i < POWER_THRESHOLD && i - 1 < POWER_THRESHOLD) {
+                silenceCount++;
+            }
+            else if (i < POWER_THRESHOLD && i - 1 >= POWER_THRESHOLD) {
+                if (count >= DASH_BIN_COUNT) {
+                    silenceCount++;
+                    count = 0;
+                    return "-";
+                }
+                else {
+                    silenceCount++;
+                    count = 0;
+                    return ".";
+                }
+            }
+        }
         // if ispower and waspower
         // else if ispower and not waspower
         // else if issilence and wassilence
         // else if issilence and not wassilence
 
-        return "";
+        return returnBuffer;
     }
 
     /**
